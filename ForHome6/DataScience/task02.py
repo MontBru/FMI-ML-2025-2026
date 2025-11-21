@@ -11,6 +11,7 @@ from sklearn.pipeline import Pipeline
 from sklearn import datasets
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import VotingClassifier
+from sklearn.neighbors import KNeighborsClassifier
 
 model_number = 1
 base_model_precision = None
@@ -36,7 +37,7 @@ def base_model(y, ws):
     model_number += 1
 
 
-def train_and_test_model(X, y, ws, name, args = None, export_to_file = True):
+def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True):
     global model_number
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21, stratify=y)
@@ -45,6 +46,13 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     
     steps = [('scaler', StandardScaler())]
+
+    if scaling == True:
+        steps = [
+                ('scaler', StandardScaler())
+                ]
+    else :
+        steps = []
 
     if name == 'logistic':
         if args == None:
@@ -56,6 +64,16 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True):
             param_grid = args.params
         reg = LogisticRegression()
         steps.append(('logistic', reg))
+
+    elif name == 'knn':
+        if args == None:
+            param_grid = {
+                'knn__n_neighbors': np.arange(1,15, 1),
+            }
+        else:
+            param_grid = args.params
+        reg = KNeighborsClassifier()
+        steps.append(('knn', reg))
 
     elif name == 'svm':
         if args == None:
@@ -115,11 +133,11 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True):
         plt.cla()
 
         img = openpyxl.drawing.image.Image(f'diagrams/{name}_confusion_matrix_{X_test.columns[0]}.png')
-        cell_ref = f'J{1 + model_number}'
+        cell_ref = f'K{1 + model_number}'
 
         img_width, img_height = img.width, img.height
 
-        column_letter = 'J'
+        column_letter = 'K'
         col_width = img_width / 7
         row_height = img_height / 1.333
 
@@ -131,7 +149,7 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True):
 
         scores = classification_report(y_test, y_pred, labels=[1], output_dict=True)
 
-        ws.append([f'{name} model on {X.columns}', X.shape[1], str(cv.best_params_), scores['1']['precision'], scores['1']['precision']/base_model_precision * 100 - 100,scores['1']['recall'], scores['1']['recall']/base_model_recall * 100 - 100, scores['1']['f1-score'], scores['1']['f1-score']/base_model_f1 * 100 -100])
+        ws.append([f'{name} model on {X.columns}', scaling, X.shape[1], str(cv.best_params_), scores['1']['precision'], scores['1']['precision']/base_model_precision * 100 - 100,scores['1']['recall'], scores['1']['recall']/base_model_recall * 100 - 100, scores['1']['f1-score'], scores['1']['f1-score']/base_model_f1 * 100 -100])
         model_number += 1
 
     return cv, [y_test, y_pred]
@@ -147,7 +165,7 @@ def main():
     wb.create_sheet('ModelReport')
     ws = wb['ModelReport']
 
-    ws.append(['Model', 'Number of variables','Hyperparams', "Precision", "Precision increase from base model (in %)", "Recall", "Recall increase from base model (in %)", "F1 Score", "F1 score increase from base model (in %)", "Confusion matrix", "Comments"])
+    ws.append(['Model', "Scaling",'Number of variables','Hyperparams', "Precision", "Precision increase from base model (in %)", "Recall", "Recall increase from base model (in %)", "F1 Score", "F1 score increase from base model (in %)", "Confusion matrix", "Comments"])
 
     base_model(y, ws)
 
@@ -168,6 +186,7 @@ def main():
     ]
 
     model_options = [
+        'knn',
         'logistic',
         'svm',
         'cart',
@@ -192,23 +211,24 @@ def main():
 
     for X in X_options:
         for name in model_options:
-            if name == 'ensemble':
-                for i in range(len(ensemble_models)):
-                    args = {'models': ensemble_models[i]}
-                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args)
+            for scaling in [True, False]:
+                if name == 'ensemble':
+                    for i in range(len(ensemble_models)):
+                        args = {'models': ensemble_models[i]}
+                        curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args, scaling=scaling)
 
+                        if curr_model.best_score_ > best_model_accuracy:
+                            best_model_accuracy = curr_model.best_score_
+                            best_model = curr_model
+                            best_model_cache = curr_model_cache
+
+                else:
+                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, scaling=scaling)
+                    
                     if curr_model.best_score_ > best_model_accuracy:
                         best_model_accuracy = curr_model.best_score_
                         best_model = curr_model
                         best_model_cache = curr_model_cache
-
-            else:
-                curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name)
-                
-                if curr_model.best_score_ > best_model_accuracy:
-                    best_model_accuracy = curr_model.best_score_
-                    best_model = curr_model
-                    best_model_cache = curr_model_cache
 
     RocCurveDisplay.from_predictions(best_model_cache[0], best_model_cache[1])
     plt.title('Logistic Regression ROC Curve')
@@ -216,7 +236,8 @@ def main():
     plt.cla()
 
     img = openpyxl.drawing.image.Image(f'./diagrams/roc_curve.png')
-    img.anchor = 'A7'
+    row = ws.max_row+1
+    img.anchor = f'A{row}'
     ws.add_image(img)
 
 

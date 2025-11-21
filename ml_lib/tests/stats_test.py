@@ -1,94 +1,104 @@
-from ml_lib import stats
+import unittest
 import numpy as np
+from ml_lib import stats
 
-def test_sigmoid_matrix():
-    x = np.array([[0, 1], [-1, 2]])
-    expected = 1 / (1 + np.exp(-x))
-    result = stats.sigmoid(x)
-    assert np.allclose(result, expected), f"Expected {expected}, got {result}"
+class TestSigmoid(unittest.TestCase):
+    def test_when_matrix_given_then_elementwise_sigmoid(self):
+        # Arrange
+        x = np.array([[0, 1], [-1, 2]])
+        expected = 1 / (1 + np.exp(-x))
+        # Act
+        actual = stats.sigmoid(x)
+        # Assert
+        np.testing.assert_allclose(actual, expected)
 
-def test_sigmoid_zero_matrix():
-    x = np.zeros((2, 2))
-    expected = np.full((2, 2), 0.5)
-    result = stats.sigmoid(x)
-    assert np.allclose(result, expected), f"Expected {expected}, got {result}"
+    def test_when_zero_matrix_then_half_everywhere(self):
+        # Arrange
+        x = np.zeros((2, 2))
+        expected = np.full((2, 2), 0.5)
+        # Act
+        actual = stats.sigmoid(x)
+        # Assert
+        np.testing.assert_allclose(actual, expected)
 
-def test_softmax_matrix_rows_sum_to_one():
-    x = np.array([[1, 2, 3], [0, 0, 0]])
-    result = stats.softmax(x)
-    row_sums = np.sum(result, axis=1)
-    expected = np.ones(x.shape[0])
-    assert np.allclose(row_sums, expected), f"Each row should sum to 1, got {row_sums}"
+class TestSoftmax(unittest.TestCase):
+    def test_when_matrix_given_then_rows_sum_to_one(self):
+        # Arrange
+        x = np.array([[1, 2, 3], [0, 0, 0]])
+        expected = np.ones(x.shape[0])
+        # Act
+        actual = stats.softmax(x)
+        row_sums = np.sum(actual, axis=1)
+        # Assert
+        np.testing.assert_allclose(row_sums, expected)
 
-def test_softmax_matrix_values_nonnegative():
-    x = np.random.randn(3, 4)
-    result = stats.softmax(x)
-    assert np.all(result >= 0), f"Softmax should produce nonnegative values, got {result}"
+    def test_when_matrix_given_then_values_nonnegative(self):
+        # Arrange
+        x = np.random.randn(3, 4)
+        expected = True
+        # Act
+        actual = stats.softmax(x)
+        # Assert
+        self.assertTrue(np.all(actual >= 0))
 
-def test_softmax_invariance_to_constant_shift():
-    x = np.array([[1, 2, 3]])
-    shifted_x = x + 100
-    result = stats.softmax(x)
-    shifted_result = stats.softmax(shifted_x)
-    assert np.allclose(result, shifted_result), "Softmax should be invariant to constant shifts"
+    def test_when_constant_shift_then_invariant(self):
+        # Arrange
+        x = np.array([[1, 2, 3]])
+        shifted_x = x + 100
+        # Act
+        actual = stats.softmax(x)
+        shifted_actual = stats.softmax(shifted_x)
+        # Assert
+        np.testing.assert_allclose(actual, shifted_actual)
 
-def test_softmax():
-    test_softmax_invariance_to_constant_shift()
-    test_softmax_matrix_rows_sum_to_one()
-    test_softmax_matrix_values_nonnegative()
-    print("All softmax tests passed successfully!")
+class TestEntropy(unittest.TestCase):
+    def test_when_nonuniform_distribution_then_entropy_computed(self):
+        # Arrange
+        x = np.array([.3, .7], dtype=float)
+        expected = 0.8812908992306927
+        # Act
+        actual = stats.entropy(x)
+        # Assert
+        self.assertIsInstance(actual, float)
+        self.assertTrue(np.isclose(actual, expected))
 
-def test_sigmoid():
-    test_sigmoid_matrix()
-    test_sigmoid_zero_matrix()
-    print("All sigmoid tests passed successfully!")
+    def test_when_degenerate_distribution_then_entropy_zero(self):
+        # Arrange
+        x = np.array([1, 0, 0, 0], dtype=float)
+        expected = 0.0
+        # Act
+        actual = stats.entropy(x)
+        # Assert
+        self.assertTrue(np.isclose(actual, expected))
 
-def test_entropy():
-    # Uniform distribution — entropy should be log(n)
-    x = np.array([.3, .7], dtype=float)
-    expected = 0.8812908992306927
-    
-    result = stats.entropy(x)
-    assert isinstance(result, float), "entropy should return float"
-    assert np.isclose(result, expected), f"Expected {expected}, got {result}"
+class TestGiniIndex(unittest.TestCase):
+    def test_when_pure_distribution_then_gini_zero(self):
+        # Arrange
+        x = np.array([1, 0, 0], dtype=float)
+        expected = 0.0
+        # Act
+        actual = stats.gini_index(x)
+        # Assert
+        self.assertIsInstance(actual, float)
+        self.assertTrue(np.isclose(actual, expected))
 
-    # Degenerate distribution — entropy = 0
-    x = np.array([1, 0, 0, 0], dtype=float)
-    expected = 0.0
-    result = stats.entropy(x)
-    assert np.isclose(result, expected), f"Expected {expected}, got {result}"
+    def test_when_two_classes_equal_then_gini_half(self):
+        # Arrange
+        x = np.array([.5, .5], dtype=float)
+        expected = 0.5
+        # Act
+        actual = stats.gini_index(x)
+        # Assert
+        self.assertTrue(np.isclose(actual, expected))
 
-    print("test_entropy passed!")
-
-
-def test_gini_index():
-    # Pure distribution (only one class) — gini = 0
-    x = np.array([1, 0, 0], dtype=float)
-    expected = 0.0
-    result = stats.gini_index(x)
-    assert isinstance(result, float), "gini_index should return float"
-    assert np.isclose(result, expected), f"Expected {expected}, got {result}"
-
-    # Two equally likely classes — gini = 0.5
-    x = np.array([.5, .5], dtype=float)
-    expected = 0.5 
-    result = stats.gini_index(x)
-    assert np.isclose(result, expected), f"Expected {expected}, got {result}"
-
-    # Three-class uniform distribution — gini = 1 - 3*(1/3)^2 = 2/3
-    x = np.array([1/3, 1/3, 1/3], dtype=float)
-    expected = 2/3
-    result = stats.gini_index(x)
-    assert np.isclose(result, expected), f"Expected {expected}, got {result}"
-
-    print("test_gini_index passed!")
-
-
-def main():
-    test_sigmoid()
-    test_softmax()
-    test_entropy()
-    test_gini_index()
+    def test_when_three_class_uniform_then_gini_two_thirds(self):
+        # Arrange
+        x = np.array([1/3, 1/3, 1/3], dtype=float)
+        expected = 2/3
+        # Act
+        actual = stats.gini_index(x)
+        # Assert
+        self.assertTrue(np.isclose(actual, expected))
 
 if __name__ == '__main__':
-    main()
+    unittest.main()

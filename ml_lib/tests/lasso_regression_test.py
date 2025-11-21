@@ -1,62 +1,53 @@
+import unittest
 import numpy as np
 from ml_lib.linear_model import Lasso
 
+class TestFit(unittest.TestCase):
+    def test_when_perfect_linear_data_then_fit_predicts_perfectly(self):
+        # Arrange
+        X = np.array([[0], [1], [2], [3]], dtype=float)
+        y = 2*X.flatten() + 1
+        expected = y
+        # Act
+        model = Lasso()
+        model.fit(X, y, verbose=True)
+        actual = model.predict(X)
+        # Assert
+        np.testing.assert_allclose(actual, expected, atol=1e-1)
 
-def test_fit_predict_perfect():
-    # y = 2x + 1 — learnable linear relationship
-    X = np.array([[0], [1], [2], [3]], dtype=float)  # shape (N,1)
-    y = 2*X.flatten() + 1  # shape (N,)
+    def test_when_mismatched_shapes_then_raises(self):
+        # Arrange
+        X = np.random.randn(10, 3)
+        y = np.random.randn(9)
+        # Act & Assert
+        model = Lasso()
+        with self.assertRaises(Exception):
+            model.fit(X, y)
 
-    model = Lasso()
-    model.fit(X, y, verbose=True)
-    y_pred = model.predict(X)
+class TestScore(unittest.TestCase):
+    def test_when_perfect_fit_then_r2_is_one(self):
+        # Arrange
+        X = np.array([[0], [1], [2], [3]], dtype=float)
+        y = 2*X.flatten() + 1
+        expected = 1.0
+        # Act
+        model = Lasso()
+        model.fit(X, y, verbose=True)
+        actual = model.score(X, y)
+        # Assert
+        self.assertTrue(np.isclose(actual, expected))
 
-    # perfect reconstruction
-    assert np.allclose(y_pred, y, atol=1e-1)
-
-
-def test_score_perfect_r2_equals_1():
-    X = np.array([[0], [1], [2], [3]], dtype=float)
-    y = 2*X.flatten() + 1
-
-    model = Lasso()
-    model.fit(X, y, verbose=True)
-    r2 = model.score(X, y)
-
-    assert np.isclose(r2, 1.0)
-
-
-def test_score_worse_than_baseline_r2_negative():
-    X = np.array([[0], [1], [2], [3]], dtype=float)
-    y = np.array([0, 0, 0, 0], dtype=float)
-    y_bad_pred = np.array([10, 10, 10, 10])  # what model will predict after bad fit?
-
-    model = Lasso()
-    model.fit(X, y_bad_pred)   # model learns something irrelevant
-    r2 = model.score(X, y)
-
-    assert r2 < 0  # worse than predicting the mean
-
-
-
-
-def test_fit_mismatch_shapes_should_raise():
-    X = np.random.randn(10, 3)
-    y = np.random.randn(9)  # wrong length
-
-    model = Lasso()
-    try:
-        model.fit(X, y)
-    except:
-        return
-    raise Exception("Expected to raise exception because of size mismatch")
-
-
-def main():
-    test_fit_predict_perfect()
-    test_fit_mismatch_shapes_should_raise()
-    test_score_perfect_r2_equals_1()
-    test_score_worse_than_baseline_r2_negative()
+    def test_when_model_worse_than_baseline_then_r2_negative(self):
+        # Arrange
+        X = np.array([[0], [1], [2], [3]], dtype=float)
+        y = np.array([0, 0, 0, 0], dtype=float)
+        y_bad_pred = np.array([10, 10, 10, 10])
+        # Act
+        model = Lasso()
+        model.fit(X, y_bad_pred)
+        actual = model.score(X, y)
+        # Assert
+        self.assertTrue(actual < 0)
 
 if __name__ == '__main__':
-    main()
+    unittest.main()

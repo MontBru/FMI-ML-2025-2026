@@ -12,6 +12,7 @@ from sklearn.ensemble import VotingRegressor
 
 model_number = 1
 base_model_score = None
+feature_importance_diagram_created = False
 
 def base_model( y, ws):
     global model_number
@@ -21,7 +22,7 @@ def base_model( y, ws):
     pred = np.mean(y_train)
 
     y_pred = np.ones_like(y_test) * pred
-    base_model_score = r2_score(y_test, y_pred)
+    base_model_score = r2_score(y_test, y_pred) + 1e-6
 
     ws.append([f'Base model', '', '', base_model_score, 0])
     model_number += 1
@@ -31,6 +32,7 @@ def train_and_test_model(X, y, ws, name, args=None, export_to_file = True):
 
     global model_number
     global base_model_score
+    global feature_importance_diagram_created
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21)
 
@@ -152,7 +154,28 @@ def train_and_test_model(X, y, ws, name, args=None, export_to_file = True):
         img.anchor = cell_ref
         ws.add_image(img, cell_ref)
 
-        ws.append([f'{name} Regression on {X.columns}', X.shape[1], str(cv.best_params_), cv.best_score_])
+        if 'lasso' in name and not feature_importance_diagram_created:
+            best = cv.best_estimator_
+            lasso = best.named_steps["lasso"]
+            coefs = lasso.coef_
+            feature_importance = pd.DataFrame({
+                "feature": X.columns,
+                "coef": coefs,
+                "importance": np.abs(coefs)
+            })
+            feature_importance = feature_importance.sort_values("importance", ascending=False)
+
+            plt.figure(figsize=(10, 6))
+            plt.barh(feature_importance["feature"], feature_importance["importance"])
+            plt.gca().invert_yaxis()
+            plt.xlabel("Importance (|coefficient|)")
+            plt.title("Lasso Feature Importance")
+            plt.tight_layout()
+            plt.savefig(f'./diagrams/feature_importance.png')
+            plt.cla()
+            feature_importance_diagram_created = True
+
+        ws.append([f'{name} Regression on {X.columns}', X.shape[1], str(cv.best_params_), cv.best_score_, cv.best_score_/base_model_score * 100 - 100])
         model_number += 1
 
 
@@ -170,7 +193,7 @@ def main():
     wb.create_sheet('ModelReport')
     ws = wb['ModelReport']
 
-    ws.append(['Model', 'Number of variables','Hyperparams', 'R2 score'])
+    ws.append(['Model', 'Number of variables','Hyperparams', 'R2 score', "R2 score % increase from base model"])
     y = df['mpg']
     df = df.drop(columns=['mpg'])
 
@@ -207,6 +230,17 @@ def main():
             else:
                 train_and_test_model(X, y, wb['ModelReport'], model)
 
+
+    img = openpyxl.drawing.image.Image(f'diagrams/feature_importance.png')
+        
+    row = ws.max_row + 1
+    cell_ref = f'A{row}'
+
+    img_width, img_height = img.width, img.height
+
+    column_letter = 'A'
+    img.anchor = cell_ref
+    ws.add_image(img, cell_ref)
 
     wb.save(filename)
     

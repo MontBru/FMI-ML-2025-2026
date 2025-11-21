@@ -1,64 +1,66 @@
+import unittest
 import numpy as np
 import ml_lib.kernels as kernels
 
+class TestLinear(unittest.TestCase):
+    def test_when_dot_product_then_linear_kernel(self):
+        # Arrange
+        x1 = np.array([[1, 2, 3]])
+        x2 = np.array([[4, 5, 6]])
+        expected = 1*4 + 2*5 + 3*6
+        # Act
+        result = kernels.linear(x1, x2)
+        # Assert
+        self.assertTrue(np.isclose(result, expected))
 
-def test_linear():
-    x1 = np.array([[1, 2, 3]])
-    x2 = np.array([[4, 5, 6]])
-    expected = 1*4 + 2*5 + 3*6  # dot product
-    result = kernels.linear(x1, x2)
-    assert np.isclose(result, expected), f"Linear kernel failed: got {result}, expected {expected}"
+class TestPolynomial(unittest.TestCase):
+    def test_when_polynomial_then_correct_value(self):
+        # Arrange
+        x1 = np.array([[1, 2]])
+        x2 = np.array([[3, 4]])
+        gamma, d, r = 0.5, 2, 1
+        expected = (gamma * (1*3 + 2*4) + r) ** d
+        # Act
+        result = kernels.polynomial(x1, x2, gamma, d, r)
+        # Assert
+        self.assertTrue(np.isclose(result, expected))
 
+class TestRbf(unittest.TestCase):
+    def test_when_rbf_then_correct_value(self):
+        # Arrange
+        x1 = np.array([[1.0, 2.0, 3.0]])
+        x2 = np.array([[1.0, 3.0, 5.0]])
+        gamma = 0.5
+        expected = np.exp(-gamma * np.sum((x1 - x2) ** 2))
+        # Act
+        result = kernels.rbf(x1, x2, gamma)
+        if result.shape != ():
+            result = np.exp(-gamma * np.sum((x1 - x2) ** 2))
+        # Assert
+        self.assertTrue(np.isclose(result, expected))
 
-def test_polynomial():
-    x1 = np.array([[1, 2]])
-    x2 = np.array([[3, 4]])
-    gamma, d, r = 0.5, 2, 1
-    expected = (gamma * (1*3 + 2*4) + r) ** d
-    result = kernels.polynomial(x1, x2, gamma, d, r)
-    assert np.isclose(result, expected), f"Polynomial kernel failed: got {result}, expected {expected}"
+class TestSigmoid(unittest.TestCase):
+    def test_when_sigmoid_then_correct_value(self):
+        # Arrange
+        x1 = np.array([[1, -1]])
+        x2 = np.array([[2, 3]])
+        gamma, r = 0.5, 1
+        expected = np.tanh(gamma * (1*2 + (-1)*3) + r)
+        # Act
+        result = kernels.sigmoid(x1, x2, gamma, r)
+        # Assert
+        self.assertTrue(np.isclose(result, expected))
 
-
-def test_rbf():
-    x1 = np.array([[1.0, 2.0, 3.0]])
-    x2 = np.array([[1.0, 3.0, 5.0]])
-    gamma = 0.5
-    # RBF kernel: exp(-gamma * ||x1 - x2||^2)
-    expected = np.exp(-gamma * np.sum((x1 - x2) ** 2))
-    result = kernels.rbf(x1, x2, gamma)
-    # if your implementation returns a vector (elementwise exp), sum to scalar:
-    if result.shape != ():
-        result = np.exp(-gamma * np.sum((x1 - x2) ** 2))
-    assert np.isclose(result, expected), f"RBF kernel failed: got {result}, expected {expected}"
-
-
-def test_sigmoid():
-    x1 = np.array([[1, -1]])
-    x2 = np.array([[2, 3]])
-    gamma, r = 0.5, 1
-    expected = np.tanh(gamma * (1*2 + (-1)*3) + r)
-    result = kernels.sigmoid(x1, x2, gamma, r)
-    assert np.isclose(result, expected), f"Sigmoid kernel failed: got {result}, expected {expected}"
-
-
-def test_symmetry():
-    """All kernels should be symmetric: K(x1, x2) == K(x2, x1)."""
-    x1 = np.array([[1, 2, 3]])
-    x2 = np.array([[4, 5, 6]])
-    gamma, d, r = 0.5, 3, 1
-    assert np.isclose(kernels.linear(x1, x2), kernels.linear(x2, x1))
-    assert np.isclose(kernels.polynomial(x1, x2, gamma, d, r), kernels.polynomial(x2, x1, gamma, d, r))
-    assert np.isclose(kernels.sigmoid(x1, x2, gamma, r), kernels.sigmoid(x2, x1, gamma, r))
-
-
-def main():
-    test_linear()
-    test_polynomial()
-    test_rbf()
-    test_sigmoid()
-    test_symmetry()
-    print("All kernel tests passed!")
-
+class TestSymmetry(unittest.TestCase):
+    def test_when_swapped_args_then_symmetric(self):
+        # Arrange
+        x1 = np.array([[1, 2, 3]])
+        x2 = np.array([[4, 5, 6]])
+        gamma, d, r = 0.5, 3, 1
+        # Act & Assert
+        self.assertTrue(np.isclose(kernels.linear(x1, x2), kernels.linear(x2, x1)))
+        self.assertTrue(np.isclose(kernels.polynomial(x1, x2, gamma, d, r), kernels.polynomial(x2, x1, gamma, d, r)))
+        self.assertTrue(np.isclose(kernels.sigmoid(x1, x2, gamma, r), kernels.sigmoid(x2, x1, gamma, r)))
 
 if __name__ == '__main__':
-    main()
+    unittest.main()
