@@ -14,7 +14,7 @@ from sklearn.ensemble import VotingClassifier
 from sklearn.impute import SimpleImputer
 from catboost import CatBoostClassifier
 from xgboost import XGBClassifier
-from sklearn.neighbors import KNeighborsClassifier
+from ml_lib.tree import AdaBoostClassifier
 
 model_number = 1
 base_model_precision = None
@@ -44,7 +44,7 @@ def base_model(y, ws):
     model_number += 1
 
 
-def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True):
+def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True, diagrams = './diagrams'):
     global model_number
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21, stratify=y)
@@ -73,16 +73,6 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
             param_grid = args.params
         reg = LogisticRegression()
         steps.append(('logistic', reg))
-
-    elif name == 'knn':
-        if args == None:
-            param_grid = {
-                'knn__n_neighbors': np.arange(1,15, 1),
-            }
-        else:
-            param_grid = args.params
-        reg = KNeighborsClassifier()
-        steps.append(('knn', reg))
 
     elif 'svm' in name:
         if args == None:
@@ -134,6 +124,16 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
         reg = XGBClassifier()
         steps.append(('xgboost', reg))
 
+    elif 'adaboost' in name:
+        if args == None:
+            param_grid = {
+
+            }
+        else:
+            param_grid = args.params
+        reg = AdaBoostClassifier()
+        steps.append(('adaboost', reg))
+
     elif 'ensemble' in name:
         if args == None or (not ('models' in args)):
             models = ['svm']
@@ -165,12 +165,12 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
         
         ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
         plt.tight_layout()
-        plt.savefig(f'./diagrams/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        plt.savefig(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
         plt.cla()
 
         row_num = ws.max_row + 1
 
-        img = openpyxl.drawing.image.Image(f'diagrams/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        img = openpyxl.drawing.image.Image(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
         cell_ref = f'K{1 + row_num}'
 
         img_width, img_height = img.width, img.height
@@ -194,14 +194,15 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
 
 
 def main():
-    df = pd.read_csv("../../ForHome6/DataScience/indian_liver_patient_dataset.csv", names = ['age', 'gender', 'tb', 'db', 'alkphos', 'sgpt', 'sgot', 'tp', 'alb', 'ag ratio', 'has_liver_disease'])
+    df = pd.read_csv("ForHome6/DataScience/indian_liver_patient_dataset.csv", names = ['age', 'gender', 'tb', 'db', 'alkphos', 'sgpt', 'sgot', 'tp', 'alb', 'ag ratio', 'has_liver_disease'])
     df_dummies = pd.get_dummies(df['gender'], drop_first=True, dtype=int)
     df = pd.concat([df_dummies,df.drop(columns=['gender'])], axis=1)
 
     df['has_liver_disease'] = 2 - df['has_liver_disease']
 
     y = df['has_liver_disease']
-    filename = './model_report_task01.xlsx'
+    filename = './ForHome7/Engineering/model_report_task04_engineering.xlsx'
+    diagrams = './ForHome7/Engineering/diagrams'
 
     wb = openpyxl.Workbook()
     wb.create_sheet('ModelReport')
@@ -228,8 +229,9 @@ def main():
         # 'svm',
         # 'cart',
         # 'ensemble',
-        'xgboost', 
-        'catboost'
+        # 'xgboost', 
+        # 'catboost'
+        'adaboost'
     ]
 
     ensemble_models = [
@@ -243,7 +245,7 @@ def main():
                 if name == 'ensemble':
                     for i in range(len(ensemble_models)):
                         args = {'models': ensemble_models[i]}
-                        curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args, scaling=scaling)
+                        curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args, scaling=scaling, diagrams=diagrams)
 
                         if curr_model.best_score_ > best_model_accuracy:
                             best_model_accuracy = curr_model.best_score_
@@ -251,7 +253,7 @@ def main():
                             best_model_cache = curr_model_cache
 
                 else:
-                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, scaling=scaling)
+                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, scaling=scaling, diagrams=diagrams)
                     
                     if curr_model.best_score_ > best_model_accuracy:
                         best_model_accuracy = curr_model.best_score_
@@ -260,10 +262,10 @@ def main():
 
     RocCurveDisplay.from_predictions(best_model_cache[0], best_model_cache[1])
     plt.title('Logistic Regression ROC Curve')
-    plt.savefig('./diagrams/roc_curve.png')
+    plt.savefig(f'{diagrams}/roc_curve.png')
     plt.cla()
 
-    img = openpyxl.drawing.image.Image(f'./diagrams/roc_curve.png')
+    img = openpyxl.drawing.image.Image(f'{diagrams}/roc_curve.png')
     
     row = ws.max_row+1
     img.anchor = f'A{row}'

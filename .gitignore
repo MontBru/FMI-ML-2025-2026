@@ -6,3 +6,4 @@ venv/
 .idea/
 .vscode/
 .DS_Store
+Homework1/restaurant_clf.csv

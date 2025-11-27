@@ -31,20 +31,15 @@ def base_model(y, ws):
 
     y_pred = np.ones_like(y) * pred
 
-    # base_model_recall = recall_score(y, y_pred)
-    # base_model_precision = precision_score(y, y_pred)
-    # base_model_f1 = 2*base_model_precision*base_model_recall/(base_model_precision + base_model_recall)
-
-    base_model_recall = 1
-    base_model_precision = 1
-    base_model_f1 = 1
-
+    base_model_recall = recall_score(y, y_pred)
+    base_model_precision = precision_score(y, y_pred)
+    base_model_f1 = 2*base_model_precision*base_model_recall/(base_model_precision + base_model_recall)
 
     ws.append([f'Base model','', '', '', base_model_precision, 0, base_model_recall, 0, base_model_f1, 0])
     model_number += 1
 
 
-def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True):
+def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True, diagrams = './diagrams'):
     global model_number
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21, stratify=y)
@@ -53,7 +48,9 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     
     imp = SimpleImputer(missing_values=np.nan, strategy='median')
-    
+    param_grid = None
+
+
     if scaling == True:
         steps = [('imp', imp),
                 ('scaler', StandardScaler())
@@ -87,7 +84,7 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
     elif 'svm' in name:
         if args == None:
             param_grid = {
-                'svm__kernel':['rbf', 'poly', 'linear'],
+                'svm__kernel':['linear'],
                 'svm__C': np.arange(.1,1, .1),
                 'svm__gamma': ['scale'],
             }
@@ -165,13 +162,13 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
         
         ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
         plt.tight_layout()
-        plt.savefig(f'./diagrams/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        plt.savefig(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
         plt.cla()
 
         row_num = ws.max_row + 1
 
-        img = openpyxl.drawing.image.Image(f'diagrams/{name}_confusion_matrix_{X_test.columns[0]}.png')
-        cell_ref = f'K{1 + row_num}'
+        img = openpyxl.drawing.image.Image(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        cell_ref = f'K{row_num}'
 
         img_width, img_height = img.width, img.height
 
@@ -180,7 +177,7 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
         row_height = img_height / 1.333
 
         ws.column_dimensions[column_letter].width = col_width
-        ws.row_dimensions[1 + row_num].height = row_height
+        ws.row_dimensions[row_num].height = row_height
 
         img.anchor = cell_ref
         ws.add_image(img, cell_ref)
@@ -193,44 +190,34 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
     return cv, [y_test, y_pred]
 
 
-def main():
-    df = pd.read_csv("../../ForHome6/DataScience/indian_liver_patient_dataset.csv", names = ['age', 'gender', 'tb', 'db', 'alkphos', 'sgpt', 'sgot', 'tp', 'alb', 'ag ratio', 'has_liver_disease'])
-    df_dummies = pd.get_dummies(df['gender'], drop_first=True, dtype=int)
-    df = pd.concat([df_dummies,df.drop(columns=['gender'])], axis=1)
-
-    df['has_liver_disease'] = 2 - df['has_liver_disease']
-
-    y = df['has_liver_disease']
-    filename = './model_report_task01.xlsx'
+def classify(X_options, y, filename, diagrams, model_options = None, append = False):
+    # filename = './ForHome7/Engineering/model_report_task04_engineering.xlsx'
+    # diagrams = './ForHome7/Engineering/diagrams'
 
     wb = openpyxl.Workbook()
-    wb.create_sheet('ModelReport')
+    if append == False:
+        wb.create_sheet('ModelReport')
     ws = wb['ModelReport']
 
-    ws.append(['Model', 'Scaling', 'Number of variables','Hyperparams', "Precision", "Precision increase from base model (in %)", "Recall", "Recall increase from base model (in %)", "F1 Score", "F1 score increase from base model (in %)", "Confusion matrix", "Comments"])
+    if append == False:
+        ws.append(['Model', 'Scaling', 'Number of variables','Hyperparams', "Precision", "Precision increase from base model (in %)", "Recall", "Recall increase from base model (in %)", "F1 Score", "F1 score increase from base model (in %)", "Confusion matrix", "Comments"])
 
-    base_model(y, ws)
+        base_model(y, ws)
 
     best_model = None
     best_model_accuracy = 0
     best_model_cache = []
 
-    
-    X_options = [
-        df, #training model with all data
-        df.drop(columns=['tb', 'sgpt', 'tp']), 
-        df.drop(columns=['tb', 'sgpt', 'tp', 'ag ratio']), 
-    ]
-
-    model_options = [
-        # 'knn',
-        # 'logistic',
-        # 'svm',
-        # 'cart',
-        # 'ensemble',
-        'xgboost', 
-        'catboost'
-    ]
+    if model_options == None:
+        model_options = [
+            'knn',
+            'logistic',
+            # 'svm',
+            'cart',
+            # 'ensemble',
+            'xgboost', 
+            'catboost'
+        ]
 
     ensemble_models = [
         ["logistic", "svm", 'cart'],
@@ -239,11 +226,12 @@ def main():
 
     for X in X_options:
         for name in model_options:
+            print(name)
             for scaling in [True, False]:
                 if name == 'ensemble':
                     for i in range(len(ensemble_models)):
                         args = {'models': ensemble_models[i]}
-                        curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args, scaling=scaling)
+                        curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, args=args, scaling=scaling, diagrams=diagrams)
 
                         if curr_model.best_score_ > best_model_accuracy:
                             best_model_accuracy = curr_model.best_score_
@@ -251,7 +239,7 @@ def main():
                             best_model_cache = curr_model_cache
 
                 else:
-                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, scaling=scaling)
+                    curr_model, curr_model_cache = train_and_test_model(X, y, wb['ModelReport'], name, scaling=scaling, diagrams=diagrams)
                     
                     if curr_model.best_score_ > best_model_accuracy:
                         best_model_accuracy = curr_model.best_score_
@@ -260,10 +248,10 @@ def main():
 
     RocCurveDisplay.from_predictions(best_model_cache[0], best_model_cache[1])
     plt.title('Logistic Regression ROC Curve')
-    plt.savefig('./diagrams/roc_curve.png')
+    plt.savefig(f'{diagrams}/roc_curve.png')
     plt.cla()
 
-    img = openpyxl.drawing.image.Image(f'./diagrams/roc_curve.png')
+    img = openpyxl.drawing.image.Image(f'{diagrams}/roc_curve.png')
     
     row = ws.max_row+1
     img.anchor = f'A{row}'
@@ -271,7 +259,3 @@ def main():
 
 
     wb.save(filename)
-    
-
-if __name__ == '__main__':
-    main()
