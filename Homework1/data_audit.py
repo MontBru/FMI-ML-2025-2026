@@ -4,10 +4,17 @@ import openpyxl
 import seaborn as sns
 from sklearn import datasets
 
-def create_correlation_heatmap(df, diagrams_folder_path):
+def create_correlation_heatmap(df, diagrams_folder_path, title= None, filename = None):
     corr = df.select_dtypes('number').corr()
-    sns.heatmap(data=corr)
-    plt.savefig(f'{diagrams_folder_path}/heatmap.png', bbox_inches='tight')
+    if title is not None:
+        plt.title(title)
+    sns.heatmap(data=corr,
+                vmin=-1,
+                vmax=1,
+                center=0)
+    if filename is None:
+        filename = 'heatmap.png'
+    plt.savefig(f'{diagrams_folder_path}/{filename}', bbox_inches='tight')
     plt.clf()
 
     print("Created correlation heatmap")
@@ -22,17 +29,27 @@ def create_pairplot(df, diagrams_folder_path, hue_column=None):
     plt.clf()
     plt.figure(figsize=(8, 6))
 
-def save_correlation_heatmap_to_excel(wb, diagram_folder_path):
+def save_correlation_heatmap_to_excel(wb, diagram_folder_path, filename=None):
     ws = wb['data_audit']
-    img = openpyxl.drawing.image.Image(f'{diagram_folder_path}/heatmap.png')
-    img.anchor = 'A1'
+    if filename is None:
+        filename = 'heatmap.png'
+    img = openpyxl.drawing.image.Image(f'{diagram_folder_path}/{filename}')
+    row = ws.max_row + 1
+    col = 'A'
+    cell_ref = f"{col}{row}"
+    
+    img.anchor = cell_ref
     ws.add_image(img)
     print("Saved correlation heatmap in Excel")
 
 def save_pairplot_to_excel(wb, diagram_folder_path):
     ws = wb['data_audit']
     img = openpyxl.drawing.image.Image(f'{diagram_folder_path}/pairplot.png')
-    img.anchor = 'A1'
+    row = ws.max_row + 1
+    col = 'A'
+    cell_ref = f"{col}{row}"
+    
+    img.anchor = cell_ref
     ws.add_image(img)
 
     print("Saved pairplot in Excel")
