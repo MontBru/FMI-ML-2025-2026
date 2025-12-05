@@ -54,20 +54,23 @@ def save_pairplot_to_excel(wb, diagram_folder_path):
 
     print("Saved pairplot in Excel")
 
-def create_bar_or_histogram_chart_for_column_and_save_data_to_excel(df, col, bar_chart_cols, excel_writer, diagram_folder_path):
+def create_bar_or_histogram_chart_for_column_and_save_data_to_excel(df, col, bar_chart_cols, excel_writer, diagram_folder_path, create_chart = True):
     value_counts = df[col].value_counts().sort_values(ascending=False)
     value_counts.T.to_excel(excel_writer=excel_writer, sheet_name=col)
-    if col in bar_chart_cols:
-        sns.barplot(value_counts)
-        plt.title(f'{col} bar chart')
-    else:
-        sns.histplot(df[col])
-        plt.title(f'{col} histogram')
-        plt.ylabel('count')
+    if create_chart:
+        if col in bar_chart_cols:
+            sns.barplot(value_counts)
+            plt.title(f'{col} bar chart')
+        else:
+            sns.histplot(df[col])
+            plt.title(f'{col} histogram')
+            plt.ylabel('count')
 
-    plt.xlabel(col)
-    plt.savefig(f'{diagram_folder_path}/{col}.png')
-    plt.cla()
+        plt.xlabel(col)
+        plt.xticks(rotation=90, ha='left')
+
+        plt.savefig(f'{diagram_folder_path}/{col}.png')
+        plt.cla()
 
     print("Saved column data to Excel")
     print(f"Created histograms and bar charts for column {col}")
@@ -79,7 +82,7 @@ def save_column_chart_to_excel(wb, col, diagram_folder_path):
     ws.add_image(img)
 
 def describe_df(df):
-    desc = df.describe().T
+    desc = df.describe(include='all').T
     desc['num_unique']        = df.nunique()
     desc['pct_unique']        = df.nunique() / len(df) * 100
     desc['num_missing']       = df.isna().sum()
@@ -88,7 +91,7 @@ def describe_df(df):
     desc = desc.round(2)
     return desc
 
-def create_data_audit(df, filename = './data_audit.xlsx', diagrams_folder_path = './diagrams', bar_chart_cols = [], hue_column=None, create_pairplot_ = True, create_sheets = True):
+def create_data_audit(df, filename = './data_audit.xlsx', diagrams_folder_path = './diagrams', bar_chart_cols = [], no_chart_cols = [], hue_column=None, create_pairplot_ = True, create_sheets = True):
     excel_writer = pd.ExcelWriter(filename)
 
     describe_df(df).to_excel(excel_writer=excel_writer, sheet_name='data_audit')
@@ -102,7 +105,11 @@ def create_data_audit(df, filename = './data_audit.xlsx', diagrams_folder_path =
             if col == 'Unnamed: 0':
                 continue
 
-            create_bar_or_histogram_chart_for_column_and_save_data_to_excel(df, col, bar_chart_cols, excel_writer, diagrams_folder_path)
+            if col in no_chart_cols:
+                create_bar_or_histogram_chart_for_column_and_save_data_to_excel(df, col, bar_chart_cols, excel_writer, diagrams_folder_path, create_chart = False)
+            else:
+                create_bar_or_histogram_chart_for_column_and_save_data_to_excel(df, col, bar_chart_cols, excel_writer, diagrams_folder_path)
+
 
     excel_writer.close()
 
@@ -113,7 +120,7 @@ def create_data_audit(df, filename = './data_audit.xlsx', diagrams_folder_path =
 
     if create_sheets:
         for col in df.columns:
-            if col == 'Unnamed: 0':
+            if col == 'Unnamed: 0' or col in no_chart_cols:
                 continue
             save_column_chart_to_excel(wb, col, diagrams_folder_path)
 

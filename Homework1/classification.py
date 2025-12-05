@@ -39,7 +39,9 @@ def base_model(y, ws):
     model_number += 1
 
 
-def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True, diagrams = './diagrams'):
+def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, scaling = True, diagrams = './diagrams',pipeline_steps = [],  base_model_f1 = base_model_f1,
+    base_model_recall = base_model_recall,
+    base_model_precision = base_model_precision):
     global model_number
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21, stratify=y)
@@ -50,15 +52,15 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
     imp = SimpleImputer(missing_values=np.nan, strategy='median')
     param_grid = None
 
+    steps = pipeline_steps
 
     if scaling == True:
-        steps = [('imp', imp),
+        steps.extend([('imp', imp),
                 ('scaler', StandardScaler())
-                ]
+                ])
     else :
-        steps = [
-            ('imp', imp)
-            ]
+        steps.append(('imp', imp))
+
 
     if 'logistic' in name:
         if args == None:
@@ -145,16 +147,29 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
 
         trained_models = []
         for model in models:
-            cv, cache = train_and_test_model(X, y, ws, model, export_to_file=False)
-            trained_models.append((model, cv))
+            if isinstance(model, str):
+                # model is a NAME → train a new model
+                cv, cache = train_and_test_model(X, y, ws, model, export_to_file=False)
+                trained_models.append((model, cv))
+            else:
+                # model is already a trained model object -> just append
+                trained_models.append(model)
 
         reg = VotingClassifier(trained_models)
         steps.append(('ensemble', reg))
 
     pipeline = Pipeline(steps)
 
-    cv = RandomizedSearchCV(pipeline, param_distributions=param_grid,cv=kf,return_train_score=True, scoring='f1')
-    cv.fit(X=X_train, y=y_train)
+
+    cv = None
+    if args==None or not ('tune' in args and args['tune'] == False):
+        cv = RandomizedSearchCV(pipeline, param_distributions=param_grid,cv=kf,return_train_score=True, scoring='f1')
+        cv.fit(X=X_train, y=y_train)
+    else:
+        print(X_train.shape)
+        print(y_train.shape)
+        pipeline.fit(X=X_train, y = y_train)
+        cv = pipeline
 
     y_pred = cv.predict(X_test)
 
@@ -162,12 +177,17 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
         
         ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
         plt.tight_layout()
-        plt.savefig(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        if hasattr(X, 'loc'):
+            confusion_matrix_path = f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png'
+        else:
+            confusion_matrix_path = f'{diagrams}/{name}_confusion_matrix.png'
+
+        plt.savefig(confusion_matrix_path)
         plt.cla()
 
         row_num = ws.max_row + 1
 
-        img = openpyxl.drawing.image.Image(f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png')
+        img = openpyxl.drawing.image.Image(confusion_matrix_path)
         cell_ref = f'K{row_num}'
 
         img_width, img_height = img.width, img.height
@@ -184,7 +204,10 @@ def train_and_test_model(X, y, ws, name, args = None, export_to_file = True, sca
 
         scores = classification_report(y_test, y_pred, labels=[1], output_dict=True)
 
-        ws.append([f'{name} model on {X.columns}', scaling, X.shape[1], str(cv.best_params_), scores['1']['precision'], scores['1']['precision']/base_model_precision * 100 - 100,scores['1']['recall'], scores['1']['recall']/base_model_recall * 100 - 100, scores['1']['f1-score'], scores['1']['f1-score']/base_model_f1 * 100 -100])
+        if isinstance(cv, Pipeline):
+            ws.append([f'{name} model', scaling, X.shape[1], '', scores['1']['precision'], scores['1']['precision']/base_model_precision * 100 - 100,scores['1']['recall'], scores['1']['recall']/base_model_recall * 100 - 100, scores['1']['f1-score'], scores['1']['f1-score']/base_model_f1 * 100 -100])
+        else:
+            ws.append([f'{name} model', scaling, X.shape[1], str(cv.best_params_), scores['1']['precision'], scores['1']['precision']/base_model_precision * 100 - 100,scores['1']['recall'], scores['1']['recall']/base_model_recall * 100 - 100, scores['1']['f1-score'], scores['1']['f1-score']/base_model_f1 * 100 -100])
         model_number += 1
 
     return cv, [y_test, y_pred]
