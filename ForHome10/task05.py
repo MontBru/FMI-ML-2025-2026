@@ -34,13 +34,20 @@ def predict(model, X):
     W = model[0]
     b = model[1]
 
+    X = np.array(X)
+
     X_W = X @ W
+    # print(f"{X=}")
+    # print(f"{W=}")
+    # print(f"{X_W=}")
     if b.size > 0:
-        X_W = np.add(X_W, b)
+        X_W = X_W + b
 
     #apply sigmoid and after that sum row-wise
 
+    # print(f"{X_W=}")
     return sigmoid(X_W)
+    # return X_W
 
 def calculate_loss(model, data):
     #Model will be a 2d tuple (w, b)
@@ -51,10 +58,12 @@ def calculate_loss(model, data):
         #where X is a (N, D) np array
         #y is a (N,) np array of the results
 
-    X = data[0]
-    y = data[1]
+    X = np.array(data[0])
+    y = np.array(data[1])
 
-    y_pred = predict(model, X)
+    y_pred = predict(model, X).reshape(y.shape)
+    # print(f'{y=}')
+    # print(f'{y_pred=}')
     loss = np.mean((y - y_pred)**2)
 
     return loss
@@ -68,8 +77,8 @@ def gradient_descent_step(model, data,eps=1e-8,learning_rate=0.001):
         #where X is a (N, D) np array
         #y is a (N,) np array of the results
     
-    W = model[0]
-    b = model[1]
+    W = np.array(model[0])
+    b = np.array(model[1])
 
     #I have to find gradient of W and gradient of b
 
@@ -81,24 +90,37 @@ def gradient_descent_step(model, data,eps=1e-8,learning_rate=0.001):
     for dim in range(W.size):
         eps_vector = np.zeros(W.size)
         eps_vector[dim] = eps
-        eps_vector.reshape(W.shape)
+        eps_vector = eps_vector.reshape(W.shape)
 
-        grad_W[dim] = (calculate_loss((W+eps_vector, b), data) - calculate_loss(model, data))/eps
+        eps_changed_loss = calculate_loss((W+eps_vector, b), data)
+        model_loss = calculate_loss(model, data)
+
+        grad_W[dim] = (eps_changed_loss - model_loss)/eps
         
+    
+    
     #moving b by epsilon in every dimension and seeing how the loss changes
     #(so this is dL/db)
     for dim in range(b.size):
         eps_vector = np.zeros(b.size)
         eps_vector[dim] = eps
-        eps_vector.reshape(b.shape)
+        eps_vector = eps_vector.reshape(b.shape)
 
         grad_b[dim] = (calculate_loss((W, b+eps_vector), data) - calculate_loss(model, data))/eps
         
 
-    grad_W.reshape(W.shape)
-    grad_b.reshape(b.shape)
+    
+    
+    grad_W = np.array(grad_W)
+    grad_b = np.array(grad_b)
 
-    return (W - grad_W*learning_rate, b - grad_b*learning_rate)
+    grad_W = grad_W.reshape(W.shape)
+    grad_b = grad_b.reshape(b.shape)
+
+    new_W = W - grad_W*learning_rate
+    new_b = b - grad_b*learning_rate
+
+    return (new_W, new_b)
     
 def initialize_model(x, y, seed=0, W_shape = (1,), b_shape=(1,)):
     rng = np.random.default_rng(seed)

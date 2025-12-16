@@ -2,8 +2,11 @@ from task05 import initialize_model, train_model, data_and, data_or, predict
 
 
 if __name__ == '__main__':
-    and_model = initialize_model(0, 1, W_shape=(2,), b_shape=(1,))
-    or_model = initialize_model(0, 1, W_shape=(2,), b_shape=(1,))
+    and_model = initialize_model(0, 1, W_shape=(2,1), b_shape=(1,))
+    or_model = initialize_model(0, 1, W_shape=(2,1), b_shape=(1,))
+
+    print(and_model[0])
+    print(and_model[1])
 
     print("Training AND model:")
     and_model = train_model(and_model, data_and, epochs=100000, lr=1e-1)

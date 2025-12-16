@@ -6,5 +6,9 @@ venv/
 .idea/
 .vscode/
 .DS_Store
-Homework1/restaurant_clf.csv
 **/diagrams/**
+**/price_movements.txt
+**/seeds_dataset.txt
+*.csv
+**/wikipedia-vocabulary-utf8.txt
+*.zip

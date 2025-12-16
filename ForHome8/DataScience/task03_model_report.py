@@ -26,7 +26,7 @@ def main():
 
     real_labels = y
 
-    filename = './model_report_task03.xlsx'
+    filename = './model_report_task03_new.xlsx'
     diagrams_folder_path = './diagrams'
 
     wb = openpyxl.Workbook()
