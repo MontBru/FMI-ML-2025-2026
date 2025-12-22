@@ -12,3 +12,8 @@ venv/
 *.csv
 **/wikipedia-vocabulary-utf8.txt
 *.zip
+**/article_uber.txt
+**/article.txt
+**/messy_articles.txt
+**/news_articles.txt
+
