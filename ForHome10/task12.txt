@@ -1,0 +1,61 @@
+Which class of AI techniques began to work around 2005 for solving real-world problems?
+
+What is a classic application of AI is discussed in the video?
+Facial recognition
+
+What is the simplest way of getting Machine Learning to solve a task?
+Supervised learning
+
+Define what supervised learning is.
+The machine learns from training data which consists of input/output pairs
+
+What does AI require in order to work at all?
+it requires data
+
+What class of tasks does the task for facial recognition belong to?
+classification task
+
+What is the task solved by each neuron in the brain?
+It does pattern recognition
+
+What happens when a neuron recognizes a pattern?
+It sends a signal to the other neurons, it's connected to
+
+What is a digital picture made up of?
+pixels
+
+What are the three reasons that allowed the modelling of human brain cells in software?
+-deep learning - scientific developments
+-availability of big data
+-computer power is cheap
+
+Which type of computer processor is suited really well for performing the mathematics related to deep learning?
+GPU
+
+Do the capabilities of neural networks grow with scale?
+Yes, they do
+
+What allowed for the biggest and fastest advances in the field?
+having more computer power and data
+
+What is the name of the probably most important paper in the last decade?
+"Attention is all you need"
+
+What is the Transformer architecture designed for?
+It's designed for LLMs
+
+What is the innovation that the Transformer architecture has?
+it has an attention mechanism
+
+What is the key point about GPT-3?
+It was much better than the systems before it
+
+Is machine learning more efficient at learning than humans? Why?
+It's much less efficient at learning, because we need less data to learn.
+
+What is "the bitter truth"?
+The big advances in AI have come by giving more data and more computer power to the model
+
+What is one reason why ChatGPT is not conscious?
+The fact that it doesn't think about anything, while you haven't written 
+your message to it.

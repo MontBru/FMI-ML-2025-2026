@@ -1,0 +1,31 @@
+What is machine learning in 1 sentence?
+Машинното самообучение е начин, по който компютър извлича информация 
+или взима решения, учейки се от данни.
+
+What is deep learning in 1 sentence?
+Дълбокото обучение е подобласт на машинното самообучение,
+в която се използват невронни мрежи.
+
+What is does model training mean in 1 sentence?
+Обучение на модел е когато се променят параметрите му,
+с цел да се намали грешката.
+
+What task do Large Language Models solve?
+Те предсказват коя дума е най-вероятната дума да 
+следва в изречението.
+
+What is the difference between loss functions and metrics?
+Функциите на грешката се опитваме да бъдат минимизирани,
+а метриките - максимизирани
+
+Why is the use of mean squared error preferred to the use of mean absolute error?
+Защото не искаме да има случаи, в които моделът прави големи
+грешки а предпочитаме да са по-разпределени.
+
+Why can't we cube the difference to get the mean error instead of squaring it?
+Защото ще може да се получават отрицателни стойности.
+
+Why is the derivative of the loss function beneficial during model training?
+Защото градиента сочи в посоката на най-бързо нарастване, 
+а отрицанието на градиента - на най-бързо намаляване 
+и затова го използваме, за да тренираме модела в тази посока.
