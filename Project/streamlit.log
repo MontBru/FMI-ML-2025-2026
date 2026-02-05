@@ -1,0 +1,65 @@
+
+Collecting usage statistics. To deactivate, set browser.gatherUsageStats to false.
+
+
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
+  Network URL: http://172.28.0.12:8501
+  External URL: http://104.199.127.208:8501
+
+Downloading: "https://download.pytorch.org/models/vgg16-397923af.pth" to /root/.cache/torch/hub/checkpoints/vgg16-397923af.pth
+  0%|          | 0.00/528M [00:00<?, ?B/s]  2%|▏         | 11.6M/528M [00:00<00:04, 121MB/s]  6%|▌         | 31.5M/528M [00:00<00:03, 172MB/s] 10%|▉         | 51.0M/528M [00:00<00:02, 187MB/s] 13%|█▎        | 70.4M/528M [00:00<00:02, 193MB/s] 17%|█▋        | 91.1M/528M [00:00<00:02, 202MB/s] 21%|██        | 110M/528M [00:00<00:02, 196MB/s]  24%|██▍       | 129M/528M [00:00<00:02, 190MB/s] 28%|██▊       | 147M/528M [00:00<00:02, 183MB/s] 31%|███▏      | 166M/528M [00:00<00:02, 186MB/s] 35%|███▍      | 184M/528M [00:01<00:01, 189MB/s] 39%|███▊      | 204M/528M [00:01<00:01, 193MB/s] 42%|████▏     | 224M/528M [00:01<00:01, 197MB/s] 46%|████▌     | 242M/528M [00:01<00:01, 197MB/s] 50%|████▉     | 261M/528M [00:01<00:01, 195MB/s] 53%|█████▎    | 280M/528M [00:01<00:01, 188MB/s] 57%|█████▋    | 299M/528M [00:01<00:01, 191MB/s] 61%|██████    | 321M/528M [00:01<00:01, 203MB/s] 65%|██████▍   | 341M/528M [00:01<00:01, 190MB/s] 68%|██████▊   | 360M/528M [00:01<00:00, 195MB/s] 72%|███████▏  | 381M/528M [00:02<00:00, 200MB/s] 76%|███████▌  | 402M/528M [00:02<00:00, 206MB/s] 80%|███████▉  | 422M/528M [00:02<00:00, 202MB/s] 84%|████████▎ | 441M/528M [00:02<00:00, 199MB/s] 87%|████████▋ | 460M/528M [00:02<00:00, 191MB/s] 91%|█████████ | 478M/528M [00:05<00:02, 19.5MB/s] 93%|█████████▎| 492M/528M [00:05<00:01, 23.1MB/s] 96%|█████████▌| 505M/528M [00:06<00:00, 29.2MB/s] 99%|█████████▉| 522M/528M [00:06<00:00, 39.4MB/s]100%|██████████| 528M/528M [00:06<00:00, 90.0MB/s]
+2026-02-04 17:16:04.660 `label` got an empty value. This is discouraged for accessibility reasons and may be disallowed in the future by raising an exception. Please provide a non-empty label and hide it with label_visibility if needed.
+Stack (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1032, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 379, in _run_script_thread
+    self._run_script(request.rerun_data)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 705, in _run_script
+    ) = exec_func_with_error_handling(code_to_exec, ctx)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 689, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+  File "/content/drive/MyDrive/Project/application_demo.py", line 60, in <module>
+    uploaded_file = st.file_uploader("", "mp4")
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/widgets/file_uploader.py", line 458, in file_uploader
+    return self._file_uploader(
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/widgets/file_uploader.py", line 510, in _file_uploader
+    maybe_raise_label_warnings(label, label_visibility)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/lib/policies.py", line 184, in maybe_raise_label_warnings
+    _LOGGER.warning(
+2026-02-04 17:16:38.601 `label` got an empty value. This is discouraged for accessibility reasons and may be disallowed in the future by raising an exception. Please provide a non-empty label and hide it with label_visibility if needed.
+Stack (most recent call last):
+  File "/usr/lib/python3.12/threading.py", line 1032, in _bootstrap
+    self._bootstrap_inner()
+  File "/usr/lib/python3.12/threading.py", line 1075, in _bootstrap_inner
+    self.run()
+  File "/usr/lib/python3.12/threading.py", line 1012, in run
+    self._target(*self._args, **self._kwargs)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 379, in _run_script_thread
+    self._run_script(request.rerun_data)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 705, in _run_script
+    ) = exec_func_with_error_handling(code_to_exec, ctx)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/exec_code.py", line 129, in exec_func_with_error_handling
+    result = func()
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/scriptrunner/script_runner.py", line 689, in code_to_exec
+    exec(code, module.__dict__)  # noqa: S102
+  File "/content/drive/MyDrive/Project/application_demo.py", line 60, in <module>
+    uploaded_file = st.file_uploader("", "mp4")
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/runtime/metrics_util.py", line 532, in wrapped_func
+    result = non_optional_func(*args, **kwargs)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/widgets/file_uploader.py", line 458, in file_uploader
+    return self._file_uploader(
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/widgets/file_uploader.py", line 510, in _file_uploader
+    maybe_raise_label_warnings(label, label_visibility)
+  File "/usr/local/lib/python3.12/dist-packages/streamlit/elements/lib/policies.py", line 184, in maybe_raise_label_warnings
+    _LOGGER.warning(
+  Stopping...

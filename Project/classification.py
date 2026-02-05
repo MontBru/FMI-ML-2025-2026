@@ -1,0 +1,299 @@
+from sklearn.linear_model import LogisticRegression
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, cross_val_score, KFold, GridSearchCV, RandomizedSearchCV
+from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay, classification_report, roc_curve, recall_score, precision_score, f1_score
+import openpyxl
+import numpy as np
+from sklearn import svm
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn import datasets
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import VotingClassifier
+from sklearn.impute import SimpleImputer
+from catboost import CatBoostClassifier
+from xgboost import XGBClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.multiclass import OneVsRestClassifier
+from collections import Counter
+
+model_number = 1
+base_model_precision = None
+base_model_recall = None
+base_model_f1 = None
+
+def base_model(y, ws):
+    global model_number
+    global base_model_f1
+    global base_model_recall
+    global base_model_precision
+
+    majority_class = Counter(y).most_common(1)[0][0]
+    y_pred = np.full_like(y, majority_class)
+    # print(y_pred)
+
+    base_model_recall = recall_score(y, y_pred, average="macro", zero_division=0)
+    base_model_precision = precision_score(y, y_pred, average="macro", zero_division=0)
+    base_model_f1 = f1_score(y, y_pred, average="macro", zero_division=0)
+
+    print(base_model_precision)
+    print(base_model_recall)
+    print(base_model_f1)
+
+    ws.append([f'Base model','', '', '', base_model_precision, 0, base_model_recall, 0, base_model_f1, 0])
+    model_number += 1
+
+
+def train_and_test_model(X_train, X_test, y_train, y_test, ws, name, args = None, export_to_file = True, scaling = True, diagrams = './diagrams',pipeline_steps = [],  base_model_f1 = base_model_f1,
+    base_model_recall = base_model_recall,
+    base_model_precision = base_model_precision,
+    label_names=[0, 1]):
+    global model_number
+
+    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=21, stratify=y)
+
+    n_splits = 5
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    
+    imp = SimpleImputer(missing_values=np.nan, strategy='median')
+    param_grid = None
+
+    steps = []
+
+    if scaling == True:
+        steps.extend([('imp', imp),
+                ('scaler', StandardScaler())
+                ])
+    else :
+        steps.append(('imp', imp))
+
+
+    if 'logistic' in name:
+        if args == None:
+            param_grid = {
+                'logistic__estimator__C': np.arange(.1,1, .1),
+                'logistic__estimator__penalty': ['l2']
+            }
+        else:
+            param_grid = args.params
+        reg = OneVsRestClassifier(LogisticRegression())
+        steps.append(('logistic', reg))
+
+    elif name == 'knn':
+        if args == None:
+            param_grid = {
+                'knn__estimator__n_neighbors': np.arange(1,15, 1),
+            }
+        else:
+            param_grid = args.params
+        reg = OneVsRestClassifier(KNeighborsClassifier())
+        steps.append(('knn', reg))
+
+    elif 'svm' in name:
+        if args == None:
+            param_grid = {
+                'svm__estimator__kernel':['linear'],
+                'svm__estimator__C': np.arange(.1,1, .1),
+                'svm__estimator__gamma': ['scale'],
+            }
+        else:
+            param_grid = args.params
+        reg =  OneVsRestClassifier(svm.SVC())
+        steps.append(('svm', reg))
+
+    elif 'cart' in name:
+        if args == None:
+            param_grid = {
+                'cart__estimator__criterion':['gini','entropy'],
+                'cart__estimator__max_depth': np.arange(1, 100, 1),
+                'cart__estimator__min_samples_split': np.arange(2, 50, 1)
+            }
+        else:
+            param_grid = args.params
+        reg = OneVsRestClassifier(DecisionTreeClassifier())
+        steps.append(('cart', reg))
+
+    elif 'catboost' in name:
+        if args == None:
+            param_grid = {
+                'catboost__iterations':np.arange(1, 10, 1),
+                'catboost__depth': np.arange(1, 10, 1),
+                'catboost__learning_rate': np.arange(.01, .3, .01),
+                'catboost__loss_function' : ['MultiClass']
+            }
+        else:
+            param_grid = args.params
+        reg = CatBoostClassifier()
+        steps.append(('catboost', reg))
+    elif 'xgboost' in name:
+        if args == None:
+            param_grid = {
+                'xgboost__n_estimators': np.arange(10, 100, 1),
+                # (for multiclass classification)      
+                'xgboost__num_class': [22],
+                'xgboost__objective':['multi:softprob'],
+                'xgboost__learning_rate': np.arange(.01, .3, .01),
+                'xgboost__max_depth': np.arange(1, 10, 1),
+            }
+        else:
+            param_grid = args.params
+        reg = XGBClassifier()
+        steps.append(('xgboost', reg))
+
+    elif 'ensemble' in name:
+        if args == None or (not ('models' in args)):
+            models = ['svm']
+        else:
+            models = args['models']
+
+
+        if args == None or (not ('params' in args)) :
+            param_grid = {}
+        else:
+            param_grid = args['params']
+
+        trained_models = []
+        for model in models:
+            if isinstance(model, str):
+                # model is a NAME → train a new model
+                cv, cache = train_and_test_model(X_train, X_test, y_train, y_test, ws, model, export_to_file=False)
+                trained_models.append((model, cv))
+            else:
+                # model is already a trained model object -> just append
+                trained_models.append(model)
+
+        reg = VotingClassifier(trained_models)
+        steps.append(('ensemble', reg))
+
+    pipeline = Pipeline(steps)
+
+
+    cv = None
+    if args==None or not ('tune' in args and args['tune'] == False):
+        cv = RandomizedSearchCV(pipeline, param_distributions=param_grid,cv=kf,return_train_score=True, scoring='f1_macro')
+        cv.fit(X=X_train, y=y_train)
+    else:
+        print(X_train.shape)
+        print(y_train.shape)
+        pipeline.fit(X=X_train, y = y_train)
+        cv = pipeline
+
+    y_pred = cv.predict(X_test)
+
+    if export_to_file:
+        
+        ConfusionMatrixDisplay.from_predictions(y_test, y_pred)
+        plt.tight_layout()
+        # if hasattr(X, 'loc'):
+        #     confusion_matrix_path = f'{diagrams}/{name}_confusion_matrix_{X_test.columns[0]}.png'
+        # else:
+        confusion_matrix_path = f'{diagrams}/{name}_confusion_matrix.png'
+
+        plt.savefig(confusion_matrix_path)
+        plt.cla()
+
+        row_num = ws.max_row + 1
+
+        img = openpyxl.drawing.image.Image(confusion_matrix_path)
+        cell_ref = f'K{row_num}'
+
+        img_width, img_height = img.width, img.height
+
+        column_letter = 'K'
+        col_width = img_width / 7
+        row_height = img_height / 1.333
+
+        ws.column_dimensions[column_letter].width = col_width
+        ws.row_dimensions[row_num].height = row_height
+
+        img.anchor = cell_ref
+        ws.add_image(img, cell_ref)
+
+        try:
+          scores = classification_report(y_test, y_pred, target_names=label_names, output_dict=True)
+        except:
+          print(y_test.shape)
+          print(y_pred.shape)
+
+          print(y_test[-10:])
+          print(y_pred[-10:])
+          raise Exception("")
+
+        print(base_model_precision)
+        print(base_model_recall)
+        print(base_model_f1)
+        # print(scores)
+        if isinstance(cv, Pipeline):
+            ws.append([f'{name} model', scaling, X_train.shape[1], '', scores['macro avg']['precision'], scores['macro avg']['precision']/base_model_precision * 100 - 100,scores['macro avg']['recall'], scores['macro avg']['recall']/base_model_recall * 100 - 100, scores['macro avg']['f1-score'], scores['macro avg']['f1-score']/base_model_f1 * 100 -100])
+        else:
+            ws.append([f'{name} model', scaling, X_train.shape[1], str(cv.best_params_), scores['macro avg']['precision'], scores['macro avg']['precision']/base_model_precision * 100 - 100,scores['macro avg']['recall'], scores['macro avg']['recall']/base_model_recall * 100 - 100, scores['macro avg']['f1-score'], scores['macro avg']['f1-score']/base_model_f1 * 100 -100])
+        model_number += 1
+
+    return cv, [y_test, y_pred]
+
+
+def classify(X_train, X_test, y_train, y_test, filename, diagrams, model_options = None, append = False, label_names=[0, 1]):
+    # filename = './ForHome7/Engineering/model_report_task04_engineering.xlsx'
+    # diagrams = './ForHome7/Engineering/diagrams'
+
+    global base_model_f1
+    global base_model_recall
+    global base_model_precision
+
+    wb = openpyxl.Workbook()
+    if append == False:
+        wb.create_sheet('ModelReport')
+    ws = wb['ModelReport']
+
+    if append == False:
+        ws.append(['Model', 'Scaling', 'Number of variables','Hyperparams', "Precision", "Precision increase from base model (in %)", "Recall", "Recall increase from base model (in %)", "F1 Score", "F1 score increase from base model (in %)", "Confusion matrix", "Comments"])
+
+        base_model(y_test, ws)
+
+    best_model = None
+    best_model_accuracy = 0
+    best_model_cache = []
+
+    if model_options == None:
+        model_options = [
+            'knn',
+            'logistic',
+            # 'svm',
+            'cart',
+            # 'ensemble',
+            'xgboost', 
+            'catboost'
+        ]
+
+    ensemble_models = [
+        ["logistic", "svm", 'cart'],
+        ["svm", 'cart']
+    ]
+
+    models = []
+    scaling = True
+
+    for name in model_options:
+        print(name)
+        if name == 'ensemble':
+            for i in range(len(ensemble_models)):
+                args = {'models': ensemble_models[i]}
+                curr_model, curr_model_cache = train_and_test_model(X_train, X_test, y_train, y_test, wb['ModelReport'], name, args=args, scaling=scaling, diagrams=diagrams, label_names = label_names, base_model_recall = base_model_recall, base_model_precision = base_model_precision, base_model_f1 = base_model_f1)
+
+                if curr_model.best_score_ > best_model_accuracy:
+                    best_model_accuracy = curr_model.best_score_
+                    best_model = curr_model
+                    best_model_cache = curr_model_cache
+
+        else:
+            curr_model, curr_model_cache = train_and_test_model(X_train, X_test, y_train, y_test, wb['ModelReport'], name, scaling=scaling, diagrams=diagrams, label_names = label_names, base_model_recall = base_model_recall, base_model_precision = base_model_precision, base_model_f1 = base_model_f1)
+            
+            if curr_model.best_score_ > best_model_accuracy:
+                best_model_accuracy = curr_model.best_score_
+                best_model = curr_model
+                best_model_cache = curr_model_cache
+        models.append(curr_model)
+
+    wb.save(filename)
+    return models
