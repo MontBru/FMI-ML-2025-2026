@@ -1,4 +1,4 @@
-In this project my goal is to do exercise classification from images and videos.
+In this project my goal is to do gym exercise classification from images and videos.
 
 There are two Jupyter Notebooks, one for the image classification task and one for the video classification task. The notebooks are meant to be run from Google Colab and haven't been tested locally.
 
